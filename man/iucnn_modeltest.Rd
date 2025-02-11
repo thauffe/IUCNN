@@ -28,7 +28,8 @@ iucnn_modeltest(
   randomize_instances = TRUE,
   rescale_features = FALSE,
   init_logfile = TRUE,
-  recycle_settings = FALSE
+  recycle_settings = FALSE,
+  optimizer = "adam"
 )
 }
 \arguments{
@@ -143,6 +144,8 @@ under the "logfile" argument and run model-testing for the input features
 and labels using the same models stored in that file. This setting can be
 useful when e.g. wanting to test the same models for different sets of input
 data.}
+
+\item{optimizer}{character string. Default adam. Sets the tensorflow optimizer.}
 }
 \value{
 outputs a data.frame object containing stats and settings of all

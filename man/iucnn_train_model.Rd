@@ -29,6 +29,7 @@ iucnn_train_model(
   rescale_features = FALSE,
   save_model = TRUE,
   overwrite = FALSE,
+  optimizer = "adam",
   verbose = 1
 )
 }
@@ -143,6 +144,8 @@ be rescaled to values between 0 and 1 prior to training (default=FALSE).}
 
 \item{overwrite}{logical. If TRUE existing models are
 overwritten. Default is set to FALSE.}
+
+\item{optimizer}{character string. Default adam. Sets the tensorflow optimizer.}
 
 \item{verbose}{Default 0, set to 1 for \code{iucnn_train_model} to print
 additional info to the screen while training.}

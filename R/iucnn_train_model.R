@@ -96,6 +96,7 @@
 #'@param save_model logical. If TRUE the model is saved to disk.
 #'@param overwrite logical. If TRUE existing models are
 #'overwritten. Default is set to FALSE.
+#'@param optimizer character string. Default adam. Sets the tensorflow optimizer.
 #'@param verbose Default 0, set to 1 for \code{iucnn_train_model} to print
 #'additional info to the screen while training.
 #'
@@ -154,6 +155,7 @@ iucnn_train_model <- function(x,
                         rescale_features = FALSE,
                         save_model = TRUE,
                         overwrite = FALSE,
+                        optimizer = "adam",
                         verbose = 1){
 
   # Check input
@@ -424,7 +426,8 @@ the BNN will instead provide posterior estimates of the class labels for each in
                       mc_dropout = mc_dropout,
                       label_noise_factor = label_noise_factor,
                       no_validation = no_validation,
-                      save_model = save_model
+                      save_model = save_model,
+                      optimizer = optimizer
     )
 
     test_labels <- as.vector(res$test_labels)

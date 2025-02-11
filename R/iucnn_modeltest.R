@@ -26,6 +26,7 @@
 #' and labels using the same models stored in that file. This setting can be
 #' useful when e.g. wanting to test the same models for different sets of input
 #' data.
+#'@param optimizer character string. Default adam. Sets the tensorflow optimizer.
 #'
 #' @note See \code{vignette("Approximate_IUCN_Red_List_assessments_with_IUCNN")}
 #' for a tutorial on how to run IUCNN.
@@ -81,7 +82,8 @@ iucnn_modeltest <- function(x,
                             randomize_instances = TRUE,
                             rescale_features = FALSE,
                             init_logfile = TRUE,
-                            recycle_settings = FALSE) {
+                            recycle_settings = FALSE,
+                            optimizer = "adam") {
 
   # Check input assertion
   assert_data_frame(x)
@@ -182,6 +184,7 @@ iucnn_modeltest <- function(x,
                                rescale_features = rescale_features,
                                save_model = TRUE,
                                overwrite = TRUE,
+                               optimizer = optimizer,
                                verbose = 0)
 
       iucnn_model_path <- paste0(model_outpath, "/model_",

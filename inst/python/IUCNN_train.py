@@ -42,12 +42,13 @@ def iucnn_train(dataset,
                 label_noise_factor,
                 no_validation,
                 save_model,
+                optimizer,
                 test_label_balance_factor = 1.0):
     
     
     class MCDropout(tf.keras.layers.Dropout):
         def call(self, inputs):
-            return super().call(inputs, training=True)    
+            return super().call(inputs, training=True)
     
     def build_classification_model(dropout,dropout_rate,use_bias):
         architecture = [tf.keras.layers.Flatten(input_shape=[train_set.shape[1]])]
@@ -64,7 +65,7 @@ def iucnn_train(dataset,
                                          activation=act_f_out))
         model = tf.keras.Sequential(architecture)
         model.compile(loss='categorical_crossentropy',
-                      optimizer="adam",
+                      optimizer=optimizer,
                       metrics=['accuracy'])
         return model
 
@@ -85,7 +86,7 @@ def iucnn_train(dataset,
         else:
             architecture.append(tf.keras.layers.Dense(1))
         model = tf.keras.Sequential(architecture)
-        optimizer = "adam"       # "adam" or tf.keras.optimizers.RMSprop(0.001)
+#        optimizer = "adam"       # "adam" or tf.keras.optimizers.RMSprop(0.001)
         model.compile(loss='mean_squared_error',
                       optimizer=optimizer,
                       metrics=['mae','mse'])
