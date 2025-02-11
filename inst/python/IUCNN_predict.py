@@ -11,6 +11,10 @@ import numpy as np
 import os, sys
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+
+# disable progress bars globally (instead of model.predict(..., verbose=0))
+tf.keras.utils.disable_interactive_logging()
+
 try:
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable tf compilation warning
 except:
@@ -118,7 +122,7 @@ def iucnn_predict(input_raw,
             mc_dropout_probs = turn_reg_output_into_softmax(predictions_raw.T,label_cats)
             predictions = np.argmax(mc_dropout_probs, axis=1)
         else:
-            predictions_raw_unscaled = model.predict(feature_set).flatten()
+            predictions_raw_unscaled = model.predict(feature_set, verbose=0).flatten()
             predictions_raw = rescale_labels(predictions_raw_unscaled,rescale_factor,min_max_label,stretch_factor_rescaled_labels,reverse=True) 
             mc_dropout_probs = np.nan  
             predictions = np.round(predictions_raw, 0).astype(int).flatten()

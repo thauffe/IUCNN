@@ -96,7 +96,11 @@
 #'@param save_model logical. If TRUE the model is saved to disk.
 #'@param overwrite logical. If TRUE existing models are
 #'overwritten. Default is set to FALSE.
-#'@param optimizer character string. Default adam. Sets the tensorflow optimizer.
+#'@param optimizer character string. Default adam. Sets the tensorflow
+#'optimizer.
+#'@param optimizer_args named list. Default NULL.
+#'Provides optional arguments for the tensorflow optimizers. See tensorflow
+#'documentation.
 #'@param verbose Default 0, set to 1 for \code{iucnn_train_model} to print
 #'additional info to the screen while training.
 #'
@@ -123,6 +127,11 @@
 #'
 #'summary(m1)
 #'plot(m1)
+#'
+#'# 3. Change optimizer
+#'m2 <- iucnn_train_model(x = features, lab = labels_train, overwrite = TRUE,
+#'                        optimizer = "SGD", optimizer_args = list(learning_rate = 0.02))
+#'summary(m2)
 #'}
 #'
 #'
@@ -156,6 +165,7 @@ iucnn_train_model <- function(x,
                         save_model = TRUE,
                         overwrite = FALSE,
                         optimizer = "adam",
+                        optimizer_args = NULL,
                         verbose = 1){
 
   # Check input
@@ -427,7 +437,8 @@ the BNN will instead provide posterior estimates of the class labels for each in
                       label_noise_factor = label_noise_factor,
                       no_validation = no_validation,
                       save_model = save_model,
-                      optimizer = optimizer
+                      optimizer = tolower(optimizer),
+                      optimizer_kwargs = optimizer_args
     )
 
     test_labels <- as.vector(res$test_labels)

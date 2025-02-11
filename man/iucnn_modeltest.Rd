@@ -29,7 +29,8 @@ iucnn_modeltest(
   rescale_features = FALSE,
   init_logfile = TRUE,
   recycle_settings = FALSE,
-  optimizer = "adam"
+  optimizer = "adam",
+  optimizer_args = NULL
 )
 }
 \arguments{
@@ -146,6 +147,10 @@ useful when e.g. wanting to test the same models for different sets of input
 data.}
 
 \item{optimizer}{character string. Default adam. Sets the tensorflow optimizer.}
+
+\item{optimizer_args}{named list. Default NULL.
+Provides optional arguments for the tensorflow optimizers. See tensorflow
+documentation.}
 }
 \value{
 outputs a data.frame object containing stats and settings of all

@@ -30,6 +30,7 @@ iucnn_train_model(
   save_model = TRUE,
   overwrite = FALSE,
   optimizer = "adam",
+  optimizer_args = NULL,
   verbose = 1
 )
 }
@@ -145,7 +146,12 @@ be rescaled to values between 0 and 1 prior to training (default=FALSE).}
 \item{overwrite}{logical. If TRUE existing models are
 overwritten. Default is set to FALSE.}
 
-\item{optimizer}{character string. Default adam. Sets the tensorflow optimizer.}
+\item{optimizer}{character string. Default adam. Sets the tensorflow
+optimizer.}
+
+\item{optimizer_args}{named list. Default NULL.
+Provides optional arguments for the tensorflow optimizers. See tensorflow
+documentation.}
 
 \item{verbose}{Default 0, set to 1 for \code{iucnn_train_model} to print
 additional info to the screen while training.}
@@ -182,6 +188,11 @@ m1 <- iucnn_train_model(x = features, lab = labels_train, overwrite = TRUE)
 
 summary(m1)
 plot(m1)
+
+# 3. Change optimizer
+m2 <- iucnn_train_model(x = features, lab = labels_train, overwrite = TRUE,
+                       optimizer = "SGD", optimizer_args = list(learning_rate = 0.02))
+summary(m2)
 }
 
 

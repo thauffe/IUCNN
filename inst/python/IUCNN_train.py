@@ -11,12 +11,18 @@ import os, sys
 import warnings
 warnings.filterwarnings("ignore")
 import tensorflow as tf
+from tensorflow.keras.optimizers import Adadelta, Adafactor, Adagrad, Adam, AdamW, Adamax, Ftrl, Nadam, Optimizer, RMSprop, SGD
+
+# disable progress bars globally (instead of model.predict(..., verbose=0))
+tf.keras.utils.disable_interactive_logging()
+
+
 try:
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable tf compilation warning
 except:
     pass
 
-def iucnn_train(dataset, 
+def iucnn_train(dataset,
                 labels,
                 mode,
                 path_to_output,
@@ -43,13 +49,40 @@ def iucnn_train(dataset,
                 no_validation,
                 save_model,
                 optimizer,
+                optimizer_kwargs,
                 test_label_balance_factor = 1.0):
     
     
     class MCDropout(tf.keras.layers.Dropout):
         def call(self, inputs):
             return super().call(inputs, training=True)
-    
+
+    def get_optimizer(optimizer, optimizer_kwargs):
+        opt = optimizer
+        if optimizer == 'adadelta' and not optimizer_kwargs is None:
+            opt = Adadelta(**optimizer_kwargs)
+        elif optimizer == 'adafactor' and not optimizer_kwargs is None:
+            opt = Adafactor(**optimizer_kwargs)
+        elif optimizer == 'adagrad' and not optimizer_kwargs is None:
+            opt = Adagrad(**optimizer_kwargs)
+        elif optimizer == 'adam' and not optimizer_kwargs is None:
+            opt = Adam(**optimizer_kwargs)
+        elif optimizer == 'adamw' and not optimizer_kwargs is None:
+            opt = AdamW(**optimizer_kwargs)
+        elif optimizer == 'adamax' and not optimizer_kwargs is None:
+            opt = Adamax(**optimizer_kwargs)
+        elif optimizer == 'ftrl' and not optimizer_kwargs is None:
+            opt = Ftrl(**optimizer_kwargs)
+        elif optimizer == 'nadam' and not optimizer_kwargs is None:
+            opt = Nadam(**optimizer_kwargs)
+        elif optimizer == 'optimizer' and not optimizer_kwargs is None:
+            opt = Optimizer(**optimizer_kwargs)
+        elif optimizer == 'rmsprop' and not optimizer_kwargs is None:
+            opt = RMSprop(**optimizer_kwargs)
+        elif optimizer == 'sgd' and not optimizer_kwargs is None:
+            opt = SGD(**optimizer_kwargs)
+        return opt
+
     def build_classification_model(dropout,dropout_rate,use_bias):
         architecture = [tf.keras.layers.Flatten(input_shape=[train_set.shape[1]])]
         architecture.append(tf.keras.layers.Dense(n_layers[0],
@@ -64,8 +97,9 @@ def iucnn_train(dataset,
         architecture.append(tf.keras.layers.Dense(n_class, 
                                          activation=act_f_out))
         model = tf.keras.Sequential(architecture)
+        opt = get_optimizer(optimizer, optimizer_kwargs)
         model.compile(loss='categorical_crossentropy',
-                      optimizer=optimizer,
+                      optimizer=opt,
                       metrics=['accuracy'])
         return model
 
@@ -79,7 +113,7 @@ def iucnn_train(dataset,
 
         if dropout:
             dropout_layers = [MCDropout(dropout_rate) for i in architecture[1:]]
-            architecture = [architecture[0]] + [j for i in zip(architecture[1:],dropout_layers) for j in i]
+            architecture = [architecture[0]] + [j for i in zip(architecture[1:], dropout_layers) for j in i]
 
         if act_f_out:
             architecture.append(tf.keras.layers.Dense(1, activation=act_f_out))    #sigmoid or tanh
@@ -87,9 +121,11 @@ def iucnn_train(dataset,
             architecture.append(tf.keras.layers.Dense(1))
         model = tf.keras.Sequential(architecture)
 #        optimizer = "adam"       # "adam" or tf.keras.optimizers.RMSprop(0.001)
+        
+        opt = get_optimizer(optimizer, optimizer_kwargs)
         model.compile(loss='mean_squared_error',
-                      optimizer=optimizer,
-                      metrics=['mae','mse'])
+                      optimizer=opt,
+                      metrics=['mae', 'mse'])
         return model
 
     def determine_optim_rounding_boundary(regressed_labels,true_labels):
@@ -318,7 +354,7 @@ def iucnn_train(dataset,
         else:
             test_size = int(len(labels)*test_fraction)
             train_index_blocks = [rnd_indx[:-test_size]]
-            test_indices = [rnd_indx[-test_size:]]         
+            test_indices = [rnd_indx[-test_size:]]
         cv = False
         
     train_acc_per_fold = []
