@@ -86,7 +86,7 @@ iucnn_feature_importance <- function(x,
                                      verbose = FALSE,
                                      unlink_features_within_block = TRUE){
 
-  if (!file.exists(x$trained_model_path)) {
+  if (!any(file.exists(x$trained_model_path))) {
     stop("Model path doesn't exists.
          Please check if you saved it in a temporary directory.")
   }
@@ -169,7 +169,8 @@ iucnn_feature_importance <- function(x,
     }
   }
 
-  if (length(unlink_features_within_block) > 1 && (length(unlink_features_within_block) != length(ffb))) {
+  if (length(unlink_features_within_block) > 1 &&
+      (length(unlink_features_within_block) != length(ffb))) {
     stop("Length of feature block and unlink_features_within_block differ")
   }
 
@@ -216,22 +217,29 @@ iucnn_feature_importance <- function(x,
       use_these_features <- x$input_data$test_data
       use_these_labels <- x$input_data$test_labels
     }
-    reticulate::source_python(system.file("python", "IUCNN_feature_importance.py", package = "IUCNN"))
-    feature_importance_out <- feature_importance_nn(input_features = use_these_features,
-                                                   true_labels = use_these_labels,
-                                                   model_dir = x$trained_model_path,
-                                                   iucnn_mode = x$model,
-                                                   feature_names = x$input_data$feature_names,
-                                                   rescale_factor = x$label_rescaling_factor,
-                                                   min_max_label = x$min_max_label,
-                                                   stretch_factor_rescaled_labels = x$label_stretch_factor,
-                                                   verbose = verbose,
-                                                   n_permutations = as.integer(n_permutations),
-                                                   feature_blocks = feature_block_indices,
-                                                   unlink_features_within_block = unlink_features_within_block)
-    d <- round(data.frame(matrix(unlist(feature_importance_out),
-                                 nrow = length(feature_importance_out),
-                                 byrow = TRUE)), 3)
+    cv_k <- length(x$trained_model_path)
+    d_list <- vector(mode = "list", length = cv_k)
+    for (k in 1:cv_k) {
+      reticulate::source_python(system.file("python", "IUCNN_feature_importance.py", package = "IUCNN"))
+      feature_importance_out <- feature_importance_nn(input_features = use_these_features,
+                                                      true_labels = use_these_labels,
+                                                      model_dir = x$trained_model_path[k],
+                                                      iucnn_mode = x$model,
+                                                      feature_names = x$input_data$feature_names,
+                                                      rescale_factor = x$label_rescaling_factor,
+                                                      min_max_label = x$min_max_label,
+                                                      stretch_factor_rescaled_labels = x$label_stretch_factor,
+                                                      verbose = verbose,
+                                                      n_permutations = as.integer(n_permutations),
+                                                      feature_blocks = feature_block_indices,
+                                                      unlink_features_within_block = unlink_features_within_block)
+      d_list[[k]] <- round(data.frame(matrix(unlist(feature_importance_out),
+                                             nrow = length(feature_importance_out),
+                                             byrow = TRUE)), 3)
+    }
+    # Mean across cross-validation schemes (cv_k > 1) or a single test_fraction
+    d <- Reduce('+', d_list) / cv_k
+
     d['feature_block'] <- names(feature_importance_out)
     selected_cols <- d[c('feature_block','X1','X2')]
   }
