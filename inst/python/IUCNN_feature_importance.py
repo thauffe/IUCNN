@@ -6,14 +6,29 @@ Created on Fri Mar  5 17:25:09 2021
 @author: Tobias Andermann (tobiasandermann88@gmail.com)
 """
 
+import os, sys
+# use only one thread
+try:
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+    os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
+except:
+    pass
+
 import numpy as np
 import tensorflow as tf
-import warnings, os
+import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 try:
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable tf compilation warning
 except:
     pass
+
 
 def get_regression_accuracy(model,features,labels,rescale_factor,min_max_label,stretch_factor_rescaled_labels):
     prm_est = model.predict(features).flatten()
@@ -64,6 +79,9 @@ def feature_importance_nn( input_features,
         selected_features = [[i] for i in feature_indices]
         feature_block_names = [[i] for i in feature_names]
 
+    # if there is no block-specific information if permutation of the features within the block should be independent
+    if isinstance(unlink_features_within_block, bool):
+        unlink_features_within_block = [unlink_features_within_block] * len(selected_features)
 
     model = tf.keras.models.load_model(model_dir)
     if iucnn_mode == 'nn-class':
@@ -88,7 +106,7 @@ def feature_importance_nn( input_features,
         n_accuracies = []
         for i in np.arange(n_permutations):
             features = input_features.copy()
-            if unlink_features_within_block and len(feature_block)>1:
+            if unlink_features_within_block[block_id] and len(feature_block)>1:
                 for feature_index in feature_block: # shuffle each column by it's own random indices
                     features[:,feature_index] = np.random.permutation(features[:,feature_index])
             else:
@@ -96,7 +114,7 @@ def feature_importance_nn( input_features,
             if iucnn_mode == 'nn-class':
                 __, accuracy = model.evaluate(features,true_labels,verbose=0)
         
-            elif iucnn_mode == 'nn-reg':       
+            elif iucnn_mode == 'nn-reg':
                 accuracy,__,__ = get_regression_accuracy(model,features,true_labels,rescale_factor,min_max_label,stretch_factor_rescaled_labels)
             
             n_accuracies.append(accuracy)     

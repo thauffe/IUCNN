@@ -6,8 +6,20 @@ Created on Fri May  6 17:51:02 2021
 @author: Tobias Andermann (tobiasandermann88@gmail.com)
 """
 
-import numpy as np
 import os, sys
+# use only one thread
+try:
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+    os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
+except:
+    pass
+
+import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 import tensorflow as tf
@@ -15,7 +27,6 @@ from tensorflow.keras.optimizers import Adadelta, Adafactor, Adagrad, Adam, Adam
 
 # disable progress bars globally (instead of model.predict(..., verbose=0))
 tf.keras.utils.disable_interactive_logging()
-
 
 try:
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # disable tf compilation warning

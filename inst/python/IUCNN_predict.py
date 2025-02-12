@@ -6,9 +6,21 @@ Created on Fri May  6 17:51:02 2021
 @author: Tobias Andermann (tobiasandermann88@gmail.com)
 """
 
+import os, sys
+# use only one thread
+try:
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+    os.environ["NUMEXPR_NUM_THREADS"] = "1"
+    os.environ['TF_NUM_INTEROP_THREADS'] = '1'
+    os.environ['TF_NUM_INTRAOP_THREADS'] = '1'
+except:
+    pass
+
 import tensorflow as tf
 import numpy as np
-import os, sys
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 

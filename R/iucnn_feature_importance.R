@@ -43,6 +43,8 @@
 #'defined block are shuffled independently.
 #'If FALSE, each feature column within a block is resorted in the same manner.
 #'Default is TRUE.
+#'This can also be a vector of TRUE and FALSE with the same length as the
+#'feature blocks.
 #'
 #'@note See \code{vignette("Approximate_IUCN_Red_List_assessments_with_IUCNN")}
 #'  for a tutorial on how to run IUCNN.
@@ -165,6 +167,10 @@ iucnn_feature_importance <- function(x,
         ffb['species'] <- NULL
       }
     }
+  }
+
+  if (length(unlink_features_within_block) > 1 && (length(unlink_features_within_block) != length(ffb))) {
+    stop("Length of feature block and unlink_features_within_block differ")
   }
 
   all_selected_feature_names <- c()
