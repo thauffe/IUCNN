@@ -23,7 +23,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore")
 import tensorflow as tf
-from tensorflow.keras.optimizers import Adadelta, Adafactor, Adagrad, Adam, AdamW, Adamax, Ftrl, Nadam, Optimizer, RMSprop, SGD
+from tensorflow.keras.optimizers import Adadelta, Adagrad, Adam, Adamax, Ftrl, Nadam, Optimizer, RMSprop, SGD
 
 # disable progress bars globally (instead of model.predict(..., verbose=0))
 tf.keras.utils.disable_interactive_logging()
