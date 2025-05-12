@@ -38,6 +38,8 @@
 #'@param max_epochs integer. The maximum number of epochs.
 #'@param patience integer. Number of epochs with no improvement
 #' after which training will be stopped.
+#'@param batch_size integer. Number of samples per gradient update.
+#'If unspecified, batch_size will default to 32.
 #'@param n_layers character string. Define number node per layer by providing a
 #'character string where the number of nodes for each layer are separated by
 #'underscores. E.g. '50_30_10' (default) will train a model with 3 hidden layers with
@@ -101,6 +103,9 @@
 #'@param optimizer_args named list. Default NULL.
 #'Provides optional arguments for the tensorflow optimizers. See tensorflow
 #'documentation.
+#'@param l2_regularizer named list. Default NULL.
+#'Provides optional values for L2 regularization for the kernel_regularizer,
+#'bias_regularizer, and activity_regularizer. E.g list(kernel_regularizer = 1e-4)
 #'@param verbose Default 0, set to 1 for \code{iucnn_train_model} to print
 #'additional info to the screen while training.
 #'
@@ -150,6 +155,7 @@ iucnn_train_model <- function(x,
                         seed = 1234,
                         max_epochs = 1000,
                         patience = 200,
+                        batch_size = 32,
                         n_layers = '50_30_10',
                         use_bias = TRUE,
                         balance_classes = FALSE,
@@ -166,6 +172,7 @@ iucnn_train_model <- function(x,
                         overwrite = FALSE,
                         optimizer = "adam",
                         optimizer_args = NULL,
+                        l2_regularizer = NULL,
                         verbose = 1){
 
   # Check input
@@ -423,6 +430,7 @@ the BNN will instead provide posterior estimates of the class labels for each in
                       verbose = 0,
                       max_epochs = as.integer(max_epochs),
                       patience = patience,
+                      batch_size = as.integer(batch_size),
                       n_layers = as.list(n_layers),
                       use_bias = use_bias,
                       balance_classes = balance_classes,
@@ -438,7 +446,8 @@ the BNN will instead provide posterior estimates of the class labels for each in
                       no_validation = no_validation,
                       save_model = save_model,
                       optimizer = tolower(optimizer),
-                      optimizer_kwargs = optimizer_args
+                      optimizer_kwargs = optimizer_args,
+                      l2_regularizer = l2_regularizer
     )
 
     test_labels <- as.vector(res$test_labels)

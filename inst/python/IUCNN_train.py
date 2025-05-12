@@ -45,6 +45,7 @@ def iucnn_train(dataset,
                 verbose,
                 max_epochs,
                 patience,
+                batch_size,
                 n_layers,
                 use_bias,
                 balance_classes,
@@ -61,6 +62,7 @@ def iucnn_train(dataset,
                 save_model,
                 optimizer,
                 optimizer_kwargs,
+                l2_regularizer,
                 test_label_balance_factor = 1.0):
     
     
@@ -94,19 +96,34 @@ def iucnn_train(dataset,
             opt = SGD(**optimizer_kwargs)
         return opt
 
-    def build_classification_model(dropout,dropout_rate,use_bias):
+    def get_l2_regularizer(l2_regularizer):
+        l2_reg = [None, None, None]
+        if not l2_regularizer is None:
+            if 'kernel_regularizer' in l2_regularizer.keys():
+                l2_reg[0] = tf.keras.regularizers.L2(l2_regularizer['kernel_regularizer'])
+            if 'bias_regularizer' in l2_regularizer.keys():
+                l2_reg[1] = tf.keras.regularizers.L2(l2_regularizer['bias_regularizer'])
+            if 'activity_regularizer' in l2_regularizer.keys():
+                l2_reg[2] = tf.keras.regularizers.L2(l2_regularizer['activity_regularizer'])
+        return l2_reg
+
+    def build_classification_model(dropout, dropout_rate, use_bias, l2_regularizer):
+        l2_regularizer_settings = get_l2_regularizer(l2_regularizer)
         architecture = [tf.keras.layers.Flatten(input_shape=[train_set.shape[1]])]
         architecture.append(tf.keras.layers.Dense(n_layers[0],
-                                      activation=act_f,
-                                      use_bias=use_bias))
+                                                  activation=act_f,
+                                                  use_bias=use_bias,
+                                                  kernel_regularizer=l2_regularizer_settings[0],
+                                                  bias_regularizer=l2_regularizer_settings[1],
+                                                  activity_regularizer=l2_regularizer_settings[2]))
         for i in n_layers[1:]:
             architecture.append(tf.keras.layers.Dense(i, activation=act_f))
         if dropout:
             dropout_layers = [MCDropout(dropout_rate) for i in architecture[1:]]
             architecture = [architecture[0]] + [j for i in zip(architecture[1:],dropout_layers) for j in i]
 
-        architecture.append(tf.keras.layers.Dense(n_class, 
-                                         activation=act_f_out))
+        architecture.append(tf.keras.layers.Dense(n_class,
+                                                  activation=act_f_out))
         model = tf.keras.Sequential(architecture)
         opt = get_optimizer(optimizer, optimizer_kwargs)
         model.compile(loss='categorical_crossentropy',
@@ -114,11 +131,15 @@ def iucnn_train(dataset,
                       metrics=['accuracy'])
         return model
 
-    def build_regression_model(dropout,dropout_rate,use_bias):
+    def build_regression_model(dropout, dropout_rate, use_bias, l2_regularizer):
+        l2_regularizer_settings = get_l2_regularizer(l2_regularizer)
         architecture = [tf.keras.layers.Flatten(input_shape=[train_set.shape[1]])]
         architecture.append(tf.keras.layers.Dense(n_layers[0],
-                                      activation=act_f,
-                                      use_bias=use_bias))
+                                                  activation=act_f,
+                                                  use_bias=use_bias,
+                                                  kernel_regularizer=l2_regularizer_settings[0],
+                                                  bias_regularizer=l2_regularizer_settings[1],
+                                                  activity_regularizer=l2_regularizer_settings[2]))
         for i in n_layers[1:]:
             architecture.append(tf.keras.layers.Dense(i, activation=act_f))
 
@@ -127,7 +148,9 @@ def iucnn_train(dataset,
             architecture = [architecture[0]] + [j for i in zip(architecture[1:], dropout_layers) for j in i]
 
         if act_f_out:
-            architecture.append(tf.keras.layers.Dense(1, activation=act_f_out))    #sigmoid or tanh
+            # sigmoid or tanh
+            architecture.append(tf.keras.layers.Dense(1,
+                                                      activation=act_f_out))
         else:
             architecture.append(tf.keras.layers.Dense(1))
         model = tf.keras.Sequential(architecture)
@@ -214,11 +237,11 @@ def iucnn_train(dataset,
     #         rescaled_labels = ((labels/lab_range) +0.5) * (n_labels-1)
     #     return(rescaled_labels)
 
-    def model_init(mode,dropout,dropout_rate,use_bias):
+    def model_init(mode,dropout, dropout_rate, use_bias, l2_regularizer):
         if mode == 'nn-reg':
-            model = build_regression_model(dropout,dropout_rate,use_bias)
-        elif mode == 'nn-class':    
-            model = build_classification_model(dropout,dropout_rate,use_bias)
+            model = build_regression_model(dropout, dropout_rate, use_bias, l2_regularizer)
+        elif mode == 'nn-class':
+            model = build_classification_model(dropout, dropout_rate, use_bias, l2_regularizer)
         return model 
 
     def iter_test_indices(features, n_splits = 5, shuffle = True, seed = None):
@@ -442,34 +465,38 @@ def iucnn_train(dataset,
             print('Running training for set number of epochs: %i'%max_epochs,flush=True)
             tf.random.set_seed(seed)
             # determining optimal number of epochs
-            model = model_init(mode,dropout,dropout_rate,use_bias)
+            model = model_init(mode,dropout, dropout_rate, use_bias, l2_regularizer)
             #model.build((train_set.shape[1],))
             #model.summary()
-            history = model.fit(train_set, 
-                                labels_for_training, 
+            
+            history = model.fit(train_set,
+                                labels_for_training,
                                 epochs=max_epochs,
+                                batch_size=batch_size,
                                 verbose=verbose)
             stopping_point = max_epochs-1
         else:
             tf.random.set_seed(seed)
             # train model
-            model = model_init(mode,dropout,dropout_rate,use_bias)
+            model = model_init(mode,dropout, dropout_rate, use_bias, l2_regularizer)
             #model.build((train_set.shape[1],))
             if verbose:
                 model.summary()
             # The patience parameter is the amount of epochs to check for improvement
             early_stop = tf.keras.callbacks.EarlyStopping(monitor=optimize_for_this, patience=patience, restore_best_weights=True)
             if cv: # when using CV use test set to determine stopping point
-                history = model.fit(train_set, 
-                                    labels_for_training, 
+                history = model.fit(train_set,
+                                    labels_for_training,
                                     epochs=max_epochs,
+                                    batch_size=batch_size,
                                     validation_data=(test_set,labels_for_testing),
                                     verbose=verbose,
                                     callbacks=[early_stop])
             else:
-                history = model.fit(train_set, 
-                                    labels_for_training, 
+                history = model.fit(train_set,
+                                    labels_for_training,
                                     epochs=max_epochs,
+                                    batch_size=batch_size,
                                     validation_split=0.2,
                                     verbose=verbose,
                                     callbacks=[early_stop])
