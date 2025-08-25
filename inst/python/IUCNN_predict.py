@@ -24,7 +24,7 @@ import numpy as np
 import warnings
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
-# disable progress bars globally (instead of model.predict(..., verbose=0))
+# disable progress bars globally (instead of model.predict(..., verbose=0), which does not supress progress output in R)
 tf.keras.utils.disable_interactive_logging()
 
 try:
@@ -45,7 +45,7 @@ def rescale_labels(labels,rescale_factor,min_max_label,stretch_factor_rescaled_l
         rescaled_labels = rescaled_labels_tmp*modified_range+midpoint_range
     return(rescaled_labels)
     
-def turn_low_confidence_instances_to_nan(pred,high_pp_indices):            
+def turn_low_confidence_instances_to_nan(pred,high_pp_indices):
     pred_temp = np.zeros(pred.shape)
     pred_temp[:] = np.nan
     pred_temp[high_pp_indices] = pred[high_pp_indices]
@@ -106,7 +106,7 @@ def iucnn_predict(input_raw,
             if iucnn_mode == 'cnn':
                 for i in np.arange(dropout_reps):
                     print('Predicting for dropout rep: %i'%i, flush=True)
-                    pred = model.predict(feature_set)
+                    pred = model.predict(feature_set, verbose=0)
                     # this summing below is done to save memory
                     # instead of appending all pred arrays into one giant master array
                     if i == 0:
@@ -127,16 +127,17 @@ def iucnn_predict(input_raw,
     elif iucnn_mode == 'nn-reg':
         feature_set = input_raw
         model = tf.keras.models.load_model(model_dir)
+#        model = tf.keras.layers.TFSMLayer(model_dir, call_endpoint='serving_default')
         if dropout:
             label_cats = np.arange(rescale_factor+1)
-            predictions_raw_unscaled = np.array([model.predict(feature_set).flatten() for i in np.arange(dropout_reps)])
+            predictions_raw_unscaled = np.array([model.predict(feature_set, verbose=0).flatten() for i in np.arange(dropout_reps)])
             predictions_raw = np.array([rescale_labels(i,rescale_factor,min_max_label,stretch_factor_rescaled_labels,reverse=True) for i in predictions_raw_unscaled]).T
             mc_dropout_probs = turn_reg_output_into_softmax(predictions_raw.T,label_cats)
             predictions = np.argmax(mc_dropout_probs, axis=1)
         else:
             predictions_raw_unscaled = model.predict(feature_set, verbose=0).flatten()
             predictions_raw = rescale_labels(predictions_raw_unscaled,rescale_factor,min_max_label,stretch_factor_rescaled_labels,reverse=True) 
-            mc_dropout_probs = np.nan  
+            mc_dropout_probs = np.nan
             predictions = np.round(predictions_raw, 0).astype(int).flatten()
 
 

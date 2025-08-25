@@ -253,7 +253,7 @@ iucnn_train_model <- function(x,
   labels <- data_out[[2]]
   instance_names <- data_out[[3]]
 
-  n_layers <- as.numeric(strsplit(n_layers,'_')[[1]])
+  n_layers <- as.integer(strsplit(n_layers,'_')[[1]])
 
   # set act fun if chosen auto
   if (act_f_out == 'auto') {
