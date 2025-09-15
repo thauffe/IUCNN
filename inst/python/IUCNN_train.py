@@ -423,8 +423,12 @@ def iucnn_train(dataset,
     for it, __ in enumerate(train_index_blocks):
         if cv:
             test_ids = train_index_blocks[it] # in case of cv, choose one of the k chunks as test set
-            train_ids = np.concatenate(np.array([train_index_blocks[i] for i in list(np.delete(np.arange(len(train_index_blocks)),it))])).astype(int)
-            print("Training CV fold %i/%i on %i training instances (%i test instances)..."%(it+1,cv_k,len(train_ids),len(test_ids)),flush=True)
+            train_ids = np.array([])
+            for i in list(np.delete(np.arange(len(train_index_blocks)), it)):
+                train_ids = np.concatenate((train_ids, train_index_blocks[i]), axis = None)
+            train_ids = train_ids.astype(int)
+            #train_ids = np.concatenate(np.array([train_index_blocks[i] for i in list(np.delete(np.arange(len(train_index_blocks)),it))])).astype(int)
+            print("Training CV fold %i/%i on %i training instances (%i test instances)..." % (it+1, cv_k, len(train_ids), len(test_ids)), flush=True)
         else:
             test_ids = list(test_indices[it])
             train_ids = list(train_index_blocks[it])

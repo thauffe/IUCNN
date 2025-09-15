@@ -212,7 +212,7 @@ iucnn_train_model <- function(x,
   if (inherits(provided_model, "iucnn_model")) {
     mode <- provided_model$model
     test_fraction <- 0.
-    cv_fold <- 1
+    cv_fold <- as.integer(1)
     seed <- provided_model$seed
     max_epochs <- round(mean(provided_model$final_training_epoch))
     patience <- 0
