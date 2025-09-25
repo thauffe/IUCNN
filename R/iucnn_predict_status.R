@@ -123,7 +123,7 @@ iucnn_predict_status <- function(x,
       confidence_threshold <- NULL
       greater_thresh <- acc_thres_tbl[, 2] > target_acc
       if (any(greater_thresh)) {
-        m <- min(which(m))
+        m <- min(which(greater_thresh))
         confidence_threshold <- acc_thres_tbl[m, 1]
       }
     }
@@ -168,9 +168,7 @@ iucnn_predict_status <- function(x,
     class_predictions <- matrix(NA_integer_,
                                 nrow = num_taxa,
                                 ncol = model$cv_fold)
-    raw_predictions <- matrix(NA_real_,
-                              nrow = num_taxa,
-                              ncol = model$cv_fold * dropout_reps)
+    raw_predictions <- vector(mode = "list", length = model$cv_fold)
 
     confidence_threshold2 <- confidence_threshold
     if (model$cv_fold > 1) {
@@ -191,12 +189,8 @@ iucnn_predict_status <- function(x,
 
       class_predictions[, i] <- pred_out[[i]]$class_predictions
       sampled_cat_freqs[i, , ] <- pred_out[[i]]$sampled_cat_freqs
-      idx <- (1 + (i - 1) * dropout_reps) : (i * dropout_reps)
-      raw_predictions[, idx] <- pred_out[[i]]$raw_predictions
+      raw_predictions[[i]] <- pred_out[[i]]$raw_predictions
 
-      # if (return_raw == FALSE) {
-      #   pred_out[[i]]$raw_predictions <- NaN
-      # }
       if (model$mc_dropout && dropout_reps > 0) {
         mc_dropout_probs[i, , ] <- pred_out[[i]]$mc_dropout_probs
       }
