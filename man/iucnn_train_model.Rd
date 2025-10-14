@@ -15,6 +15,7 @@ iucnn_train_model(
   seed = 1234,
   max_epochs = 1000,
   patience = 200,
+  batch_size = 32,
   n_layers = "50_30_10",
   use_bias = TRUE,
   balance_classes = FALSE,
@@ -31,6 +32,7 @@ iucnn_train_model(
   overwrite = FALSE,
   optimizer = "adam",
   optimizer_args = NULL,
+  l2_regularizer = NULL,
   verbose = 1
 )
 }
@@ -73,6 +75,9 @@ size of each CV-fold is determined by the specified number provided here.}
 
 \item{patience}{integer. Number of epochs with no improvement
 after which training will be stopped.}
+
+\item{batch_size}{integer. Number of samples per gradient update.
+If unspecified, batch_size will default to 32.}
 
 \item{n_layers}{character string. Define number node per layer by providing a
 character string where the number of nodes for each layer are separated by
@@ -152,6 +157,10 @@ optimizer.}
 \item{optimizer_args}{named list. Default NULL.
 Provides optional arguments for the tensorflow optimizers. See tensorflow
 documentation.}
+
+\item{l2_regularizer}{named list. Default NULL.
+Provides optional values for L2 regularization for the kernel_regularizer,
+bias_regularizer, and activity_regularizer. E.g list(kernel_regularizer = 1e-4)}
 
 \item{verbose}{Default 0, set to 1 for \code{iucnn_train_model} to print
 additional info to the screen while training.}
