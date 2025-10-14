@@ -99,102 +99,14 @@ iucnn_feature_importance <- function(x,
   assert_logical(verbose)
   assert_logical(unlink_features_within_block)
 
-  if (length(feature_blocks) == 0) {
-    ffb <- list(
-      geographic = c("tot_occ",
-                     "uni_occ",
-                     "mean_lat",
-                     "mean_lon",
-                     "lat_range",
-                     "lon_range",
-                     "lat_hemisphere",
-                     "eoo",
-                     "aoo"),
-      human_footprint = c("humanfootprint_1993_1",
-                          "humanfootprint_1993_2",
-                          "humanfootprint_1993_3",
-                          "humanfootprint_1993_4",
-                          "humanfootprint_2009_1",
-                          "humanfootprint_2009_2",
-                          "humanfootprint_2009_3",
-                          "humanfootprint_2009_4"),
-      climate = c("bio1",
-                  "bio4",
-                  "bio11",
-                  "bio12",
-                  "bio15",
-                  "bio17",
-                  "range_bio1",
-                  "range_bio4",
-                  "range_bio11",
-                  "range_bio12",
-                  "range_bio15",
-                  "range_bio17"),
-      biomes = c("biome_1",
-                 "biome_2",
-                 "biome_7",
-                 "biome_10",
-                 "biome_13",
-                 "biome_3",
-                 "biome_4",
-                 "biome_5",
-                 "biome_6",
-                 "biome_11",
-                 "biome_98",
-                 "biome_8",
-                 "biome_12",
-                 "biome_9",
-                 "biome_14",
-                 "biome_99")
-    )
+  fb <- make_feature_block(x = x,
+                           feature_blocks = feature_blocks,
+                           include_all_features = TRUE,
+                           provide_indices = provide_indices,
+                           unlink_features_within_block = unlink_features_within_block)
+  feature_block_indices <- fb$feature_block_indices
+  unlink_features_within_block <- fb$unlink_features_within_block
 
-  }else{
-    if (provide_indices) {
-      i <- 0
-      ffb <- NULL
-      for (block in feature_blocks) {
-        i <- i + 1
-        selected_features <- x$input_data$feature_names[as.integer(block)]
-        block_name <- paste(selected_features, collapse = ',')
-        ffb[[block_name]] <- selected_features
-      }
-    }else{
-      if (is.null(names(feature_blocks))) {
-        names(feature_blocks) <- feature_blocks
-      }
-      ffb <- feature_blocks
-      if ('species' %in% names(ffb)) {
-        ffb['species'] <- NULL
-      }
-    }
-  }
-
-  if (length(unlink_features_within_block) > 1 &&
-      (length(unlink_features_within_block) != length(ffb))) {
-    stop("Length of feature block and unlink_features_within_block differ")
-  }
-
-  all_selected_feature_names <- c()
-  feature_block_indices <- ffb
-  for (i in names(ffb)) {
-    feature_names <- ffb[i][[1]]
-    feature_indices <- c()
-    for (fname in feature_names) {
-      all_selected_feature_names <- c(all_selected_feature_names, fname)
-      findex <- which(x$input_data$feature_names == fname)
-      feature_indices <- c(feature_indices, as.integer(findex - 1))
-      # -1 is necessary because of indexing discrepancy between python and r
-    }
-    feature_block_indices[i] <- list(feature_indices)
-  }
-
-  # treat all features that are not part of a defined feature block as an individual block
-  remaining_features <- setdiff(x$input_data$feature_names,
-                               all_selected_feature_names)
-  for (fname in remaining_features) {
-    findex <- which(x$input_data$feature_names == fname)
-    feature_block_indices[fname] <- as.integer(findex - 1)
-  }
   if (x$model == 'bnn-class') {
     # source python function
     bn <- import("np_bnn")
@@ -250,4 +162,121 @@ iucnn_feature_importance <- function(x,
   class(selected_cols) <- "iucnn_featureimportance"
 
   return(selected_cols)
+}
+
+
+make_feature_block <- function(x,
+                               feature_blocks = list(),
+                               include_all_features = TRUE,
+                               provide_indices = FALSE,
+                               unlink_features_within_block = TRUE) {
+  if (length(feature_blocks) == 0) {
+    ffb <- list(
+      geographic = c("tot_occ",
+                     "uni_occ",
+                     "mean_lat",
+                     "mean_lon",
+                     "lat_range",
+                     "lon_range",
+                     "lat_hemisphere",
+                     "eoo",
+                     "aoo"),
+      human_footprint = c("humanfootprint_1993_1",
+                          "humanfootprint_1993_2",
+                          "humanfootprint_1993_3",
+                          "humanfootprint_1993_4",
+                          "humanfootprint_2009_1",
+                          "humanfootprint_2009_2",
+                          "humanfootprint_2009_3",
+                          "humanfootprint_2009_4"),
+      climate = c("bio1",
+                  "bio4",
+                  "bio11",
+                  "bio12",
+                  "bio15",
+                  "bio17",
+                  "range_bio1",
+                  "range_bio4",
+                  "range_bio11",
+                  "range_bio12",
+                  "range_bio15",
+                  "range_bio17"),
+      biomes = c("biome_1",
+                 "biome_2",
+                 "biome_7",
+                 "biome_10",
+                 "biome_13",
+                 "biome_3",
+                 "biome_4",
+                 "biome_5",
+                 "biome_6",
+                 "biome_11",
+                 "biome_98",
+                 "biome_8",
+                 "biome_12",
+                 "biome_9",
+                 "biome_14",
+                 "biome_99")
+    )
+  }
+  else {
+    if (provide_indices) {
+      i <- 0
+      ffb <- NULL
+      for (block in feature_blocks) {
+        i <- i + 1
+        selected_features <- x$input_data$feature_names[as.integer(block)]
+        block_name <- paste(selected_features, collapse = ',')
+        ffb[[block_name]] <- selected_features
+      }
+    }
+    else {
+      if (is.null(names(feature_blocks))) {
+        names(feature_blocks) <- feature_blocks
+      }
+      ffb <- feature_blocks
+      if ('species' %in% names(ffb)) {
+        ffb['species'] <- NULL
+      }
+    }
+  }
+
+  if (length(unlink_features_within_block) > 1 &&
+      (length(unlink_features_within_block) != length(ffb))) {
+    stop("Length of feature block and unlink_features_within_block differ")
+  }
+
+  all_selected_feature_names <- c()
+  feature_block_indices <- ffb
+  for (i in names(ffb)) {
+    feature_names <- ffb[i][[1]]
+    feature_indices <- c()
+    for (fname in feature_names) {
+      all_selected_feature_names <- c(all_selected_feature_names, fname)
+      findex <- which(x$input_data$feature_names == fname)
+      feature_indices <- c(feature_indices, as.integer(findex - 1))
+      # -1 is necessary because of indexing discrepancy between python and r
+    }
+    feature_block_indices[i] <- list(feature_indices)
+  }
+
+  if (include_all_features) {
+    # treat all features that are not part of a defined feature block as an individual block
+    remaining_features <- setdiff(x$input_data$feature_names,
+                                  all_selected_feature_names)
+    for (fname in remaining_features) {
+      findex <- which(x$input_data$feature_names == fname)
+      feature_block_indices[fname] <- as.integer(findex - 1)
+      if (length(unlink_features_within_block) > 1) {
+        unlink_features_within_block <- c(unlink_features_within_block, TRUE)
+      }
+    }
+  }
+
+  out <- vector(mode = "list", length = 2)
+  names(out) <- c("feature_block_indices", "unlink_features_within_block")
+  out[[1]] <- feature_block_indices
+  out[[2]] <- unlink_features_within_block
+
+  return(out)
 }

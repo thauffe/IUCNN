@@ -7,6 +7,8 @@
 #'recommended to capture the stochasticity of the predictions, lower values
 #'speed up the prediction time.
 #'@param feature_blocks a list.
+#'@param provide_indices logical. Set to TRUE if custom \code{feature_blocks}
+#'are provided as indices. Default is FALSE.
 
 #' @export
 #' @importFrom reticulate import source_python
@@ -15,7 +17,8 @@
 #'
 iucnn_get_pdp <- function(x,
                           dropout_reps,
-                          feature_blocks = list()){
+                          feature_blocks = list(),
+                          provide_indices = FALSE){
 
   if (!any(file.exists(x$trained_model_path))) {
     stop("Model path doesn't exists.
@@ -26,8 +29,17 @@ iucnn_get_pdp <- function(x,
   assert_class(x, "iucnn_model")
   assert_numeric(dropout_reps)
   assert_class(feature_blocks, "list")
+  assert_logical(provide_indices)
 
   dropout_reps <- as.integer(dropout_reps)
+
+  # features for which to obtain PDP
+  fb <- make_feature_block(x = x,
+                           feature_blocks = feature_blocks,
+                           include_all_features = FALSE,
+                           provide_indices = provide_indices,
+                           unlink_features_within_block = unlink_features_within_block)
+  feature_block_indices <- fb$feature_block_indices
 
   if (x$model == 'bnn-class') {
     placeholder <- NULL

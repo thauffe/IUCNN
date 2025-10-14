@@ -71,6 +71,7 @@ def iucnn_pdp(input_features,
                 pdp_upr[i, :] = pred_quantiles[1, :] / np.max(pred_quantiles[1, :])
             else:
                 predictions_raw = model.predict(tmp_features, verbose=0)
+                predictions_raw = np.cumsum(predictions_raw, axis=1)
                 pred_mean = np.mean(predictions_raw, axis=0)
                 pred_mean = np.cumsum(pred_mean)
             pdp[i, :] = pred_mean / np.max(pred_mean) # Make them sum to exactly 1
@@ -78,7 +79,8 @@ def iucnn_pdp(input_features,
 
     out_dict = {
         'feature': pdp_features,
-        'pdp': pdp
+        'pdp': pdp,
+        'raw_predictions': predictions_raw,
     }
     if dropout:
         out_dict.update({'lwr': pdp_lwr, 'upr': pdp_upr})

@@ -4,7 +4,12 @@
 \alias{iucnn_get_pdp}
 \title{Get partial dependence probabilities for IUCN Categories}
 \usage{
-iucnn_get_pdp(x, dropout_reps, feature_blocks = list())
+iucnn_get_pdp(
+  x,
+  dropout_reps,
+  feature_blocks = list(),
+  provide_indices = FALSE
+)
 }
 \arguments{
 \item{x}{iucnn_model object, as produced as output
@@ -16,6 +21,9 @@ recommended to capture the stochasticity of the predictions, lower values
 speed up the prediction time.}
 
 \item{feature_blocks}{a list.}
+
+\item{provide_indices}{logical. Set to TRUE if custom \code{feature_blocks}
+are provided as indices. Default is FALSE.}
 }
 \description{
 Get partial dependence probabilities for IUCN Categories
