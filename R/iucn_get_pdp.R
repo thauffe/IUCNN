@@ -37,9 +37,9 @@ iucnn_get_pdp <- function(x,
   fb <- make_feature_block(x = x,
                            feature_blocks = feature_blocks,
                            include_all_features = FALSE,
-                           provide_indices = provide_indices,
-                           unlink_features_within_block = unlink_features_within_block)
+                           provide_indices = provide_indices)
   feature_block_indices <- fb$feature_block_indices
+  num_feature_blocks <- length(feature_block_indices)
 
   if (x$model == 'bnn-class') {
     placeholder <- NULL
@@ -58,11 +58,11 @@ iucnn_get_pdp <- function(x,
     data_pdp <- rbind(x$input_data$data, x$input_data$test_data)
 
 
-    pdp <- vector(mode = "list", length = 6)
-    for (i in 5:6) {
-      ii <- as.list(as.integer(i))
+    pdp <- vector(mode = "list", length = num_feature_blocks)
+    names(pdp) <- names(feature_block_indices)
+    for (i in 1:num_feature_blocks) {
       pdp[[i]] <- iucnn_pdp(input_features = data_pdp,
-                            focal_features = ii,
+                            focal_features = feature_block_indices[[i]],
                             model_dir = model_dir,
                             iucnn_mode = iucnn_mode,
                             dropout = dropout,
@@ -70,6 +70,15 @@ iucnn_get_pdp <- function(x,
                             rescale_factor = rescale_factor,
                             min_max_label = min_max_label,
                             stretch_factor_rescaled_labels = stretch_factor_rescaled_labels)
+
+      if (length(feature_block_indices[[i]]) == 1) {
+        colnames(pdp[[i]][[1]]) <- names(feature_block_indices)[i]
+      }
+      else {
+        df <- data.frame(A = feature_blocks[[i]])
+        colnames(df) <- names(feature_block_indices)[i]
+        pdp[[i]][[1]] <- df
+      }
     }
 
   }

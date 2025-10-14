@@ -46,6 +46,9 @@ def iucnn_pdp(input_features,
 
     model = tf.keras.models.load_model(model_dir)
 
+    if not isinstance(focal_features, list):
+        focal_features = [focal_features]
+
     pdp_features = make_pdp_features(input_features, focal_features)
     num_pdp_steps = pdp_features.shape[0]
     num_iucn_cat = min_max_label[1] + 1
@@ -63,17 +66,18 @@ def iucnn_pdp(input_features,
             tmp_features[:, focal_features] = pdp_features[i, :]
             if dropout:
                 predictions_raw = np.array([model.predict(tmp_features, verbose=0) for i in np.arange(dropout_reps)])
-                for j in range(dropout_reps):
-                    predictions_raw[j, :, :] = np.cumsum(predictions_raw[j, :, :], axis=1)
                 pred_mean = np.mean(predictions_raw, axis=(0,1))
-                pred_quantiles = np.quantile(predictions_raw, q=(0.025, 0.975), axis=(0,1))
-                pdp_lwr[i, :] = pred_quantiles[0, :] / np.max(pred_quantiles[0, :]) # Make them sum to exactly 1
-                pdp_upr[i, :] = pred_quantiles[1, :] / np.max(pred_quantiles[1, :])
+                pred_reps = np.mean(predictions_raw, axis=1) # mean per dropout_reps (i.e. average across taxa)
+                pred_reps = np.cumsum(pred_reps, axis=1)
+                pred_quantiles = np.quantile(pred_reps, q=(0.025, 0.975), axis=0)
+                pdp_lwr[i, :] = pred_quantiles[0, :]
+                pdp_lwr[i, :] = pdp_lwr[i, :] / np.max(pdp_lwr[i, :])
+                pdp_upr[i, :] = pred_quantiles[1, :]
+                pdp_upr[i, :] = pdp_upr[i, :] / np.max(pdp_upr[i, :])
             else:
                 predictions_raw = model.predict(tmp_features, verbose=0)
-                predictions_raw = np.cumsum(predictions_raw, axis=1)
                 pred_mean = np.mean(predictions_raw, axis=0)
-                pred_mean = np.cumsum(pred_mean)
+            pred_mean = np.cumsum(pred_mean)
             pdp[i, :] = pred_mean / np.max(pred_mean) # Make them sum to exactly 1
 
 
@@ -116,5 +120,8 @@ def make_pdp_features(input_features, focal_features):
         # ordinal or binary
         M = focal_summary[2, 0]
         pdp_feat = np.linspace(focal_summary[1, 0], M, num=M + 1).reshape((M + 1, 1))
+    else:
+        # One-hot-encoded
+        pdp_feat = np.eye(focal_summary.shape[1])
 
     return pdp_feat
