@@ -86,8 +86,11 @@ def iucnn_pdp(input_features,
                 predictions_raw = np.vstack(predictions_raw)
 
                 if iucnn_mode == 'nn-reg':
-                    predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
-                    predictions_raw = np.array([turn_reg_output_into_softmax(predictions_raw[j, :, :], label_cats) for j in range(dropout_reps)])
+                    predictions_rescaled = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
+                    s = predictions_rescaled.shape
+                    predictions_raw = np.zeros((s[0], s[1], num_iucn_cat))
+                    for j in range(s[0]):
+                        predictions_raw[j, :, :] = turn_reg_output_into_softmax(predictions_rescaled[j, :, :].T, label_cats)
 
                 pred_mean = np.mean(predictions_raw, axis=(0, 1))
                 # mean per dropout_reps (i.e. average across taxa)
@@ -107,7 +110,7 @@ def iucnn_pdp(input_features,
 
                 if iucnn_mode == 'nn-reg':
                     predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
-                    predictions_raw = np.array([turn_reg_output_into_softmax(predictions_raw[j, :, :], label_cats) for j in range(cv_fold)])
+                    predictions_raw = turn_reg_output_into_softmax(predictions_raw.T, label_cats)
 
                 pred_mean = np.mean(predictions_raw, axis=0)
 
