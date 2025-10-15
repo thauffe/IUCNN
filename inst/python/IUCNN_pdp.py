@@ -32,6 +32,10 @@ try:
 except:
     pass
 
+# declare location of the python files make functions of other python files importable
+sys.path.append(os.path.dirname(__file__))
+from IUCNN_predict import rescale_labels, turn_reg_output_into_softmax
+
 
 def iucnn_pdp(input_features,
               focal_features,
@@ -51,8 +55,14 @@ def iucnn_pdp(input_features,
 
     pdp_features = make_pdp_features(input_features, focal_features)
     num_pdp_steps = pdp_features.shape[0]
-    num_iucn_cat = min_max_label[1] + 1
+
+    if iucnn_mode == 'nn-reg':
+        num_iucn_cat = int(rescale_factor + 1)
+        label_cats = np.arange(num_iucn_cat)
+    else:
+        num_iucn_cat = min_max_label[1] + 1
     pdp = np.zeros((num_pdp_steps, num_iucn_cat))
+
     if dropout:
         pdp_lwr = np.zeros((num_pdp_steps, num_iucn_cat))
         pdp_upr = np.zeros((num_pdp_steps, num_iucn_cat))
@@ -60,12 +70,15 @@ def iucnn_pdp(input_features,
     if iucnn_mode == 'cnn':
         sys.exit('No partial dependence probabilities possible for CNN')
 
-    elif iucnn_mode == 'nn-class':
+    else:
         for i in range(num_pdp_steps):
             tmp_features = np.copy(input_features)
             tmp_features[:, focal_features] = pdp_features[i, :]
             if dropout:
                 predictions_raw = np.array([model.predict(tmp_features, verbose=0) for i in np.arange(dropout_reps)])
+                if iucnn_mode == 'nn-reg':
+                    predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
+                    predictions_raw = np.array([turn_reg_output_into_softmax(predictions_raw[j, :, :], label_cats) for j in range(dropout_reps)])
                 pred_mean = np.mean(predictions_raw, axis=(0,1))
                 pred_reps = np.mean(predictions_raw, axis=1) # mean per dropout_reps (i.e. average across taxa)
                 pred_reps = np.cumsum(pred_reps, axis=1)
@@ -76,6 +89,10 @@ def iucnn_pdp(input_features,
                 pdp_upr[i, :] = pdp_upr[i, :] / np.max(pdp_upr[i, :])
             else:
                 predictions_raw = model.predict(tmp_features, verbose=0)
+                if iucnn_mode == 'nn-reg':
+                    predictions_raw = rescale_labels(predictions_raw, rescale_factor, min_max_label,
+                                                     stretch_factor_rescaled_labels, reverse=True)
+                    predictions_raw = turn_reg_output_into_softmax(predictions_raw, label_cats)
                 pred_mean = np.mean(predictions_raw, axis=0)
             pred_mean = np.cumsum(pred_mean)
             pdp[i, :] = pred_mean / np.max(pred_mean) # Make them sum to exactly 1

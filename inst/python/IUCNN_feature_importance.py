@@ -29,6 +29,10 @@ try:
 except:
     pass
 
+# declare location of the python files make functions of other python files importable
+sys.path.append(os.path.dirname(__file__))
+from IUCNN_predict import rescale_labels
+
 
 def get_regression_accuracy(model,features,labels,rescale_factor,min_max_label,stretch_factor_rescaled_labels):
     prm_est = model.predict(features).flatten()
@@ -37,18 +41,6 @@ def get_regression_accuracy(model,features,labels,rescale_factor,min_max_label,s
     label_predictions = np.round(prm_est_rescaled, 0).astype(int).flatten()
     cat_acc = np.sum(label_predictions==real_labels)/len(label_predictions)
     return cat_acc, label_predictions, prm_est_rescaled
-
-def rescale_labels(labels,rescale_factor,min_max_label,stretch_factor_rescaled_labels,reverse=False):
-    label_range = max(min_max_label)-min(min_max_label)
-    modified_range = stretch_factor_rescaled_labels*label_range
-    midpoint_range = np.mean(min_max_label)
-    if reverse:
-        rescaled_labels_tmp = (labels-midpoint_range)/modified_range
-        rescaled_labels = (rescaled_labels_tmp+0.5)*rescale_factor
-    else:
-        rescaled_labels_tmp = (labels/rescale_factor)-0.5
-        rescaled_labels = rescaled_labels_tmp*modified_range+midpoint_range
-    return(rescaled_labels)
 
 
 def feature_importance_nn( input_features,

@@ -53,10 +53,10 @@ def turn_low_confidence_instances_to_nan(pred,high_pp_indices):
     return pred
 
 def turn_reg_output_into_softmax(reg_out_rescaled,label_cats):
-        predictions = np.round(reg_out_rescaled, 0).astype(int)
-        softmax_probs_mean = np.array([[len(np.where(predictions[:,i]==j)[0])/len(predictions[:,i]) for j in label_cats] for  i in np.arange(predictions.shape[1])])
-        return softmax_probs_mean
-    
+    predictions = np.round(reg_out_rescaled, 0).astype(int)
+    softmax_probs_mean = np.array([[len(np.where(predictions[:,i]==j)[0])/len(predictions[:,i]) for j in label_cats] for  i in np.arange(predictions.shape[1])])
+    return softmax_probs_mean
+
 
 def store_pred_features_as_pkl(input_raw):
     import pickle as pkl
