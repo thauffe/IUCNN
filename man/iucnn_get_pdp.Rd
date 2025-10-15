@@ -6,8 +6,9 @@
 \usage{
 iucnn_get_pdp(
   x,
-  dropout_reps,
+  dropout_reps = 100,
   feature_blocks = list(),
+  include_all_features = FALSE,
   provide_indices = FALSE
 )
 }
@@ -20,11 +21,54 @@ predictions are to be repeated (only for dropout models). A value of 100 is
 recommended to capture the stochasticity of the predictions, lower values
 speed up the prediction time.}
 
-\item{feature_blocks}{a list.}
+\item{feature_blocks}{a list of features for which the PDP should be obtained.
+One hot encoded features should be grouped (see example)}
+
+\item{include_all_features}{logical (default = FALSE). IF FALSE, PDPs will be
+only obtained for the features in the feature_blocks. If TRUE, PDPs will be
+calculated for all feature.}
 
 \item{provide_indices}{logical. Set to TRUE if custom \code{feature_blocks}
 are provided as indices. Default is FALSE.}
 }
+\value{
+A list named according to the feature block with the gradient of the
+feature and the partial dependence probabilities for the IUCN category.
+When the model has been trained with dropout, the output includes a
+95\% prediction interval.
+}
 \description{
 Get partial dependence probabilities for IUCN Categories
+}
+\note{
+See \code{vignette("Approximate_IUCN_Red_List_assessments_with_IUCNN")}
+for a tutorial on how to run IUCNN.
+}
+\examples{
+\dontrun{
+data("training_occ")
+data("training_labels")
+
+train_feat <- iucnn_prepare_features(training_occ, type = "geographic")
+train_feat$yellow <- 0
+train_feat$yellow[1:300] <- 1
+train_feat$blue <- 0
+train_feat$blue[301:600] <- 1
+train_feat$red <- 0
+train_feat$red[601:nrow(train_feat)] <- 1
+labels_train <- iucnn_prepare_labels(training_labels, train_feat,
+                                    level = 'detail')
+
+train_output <- iucnn_train_model(x = train_feat,
+                                 lab = labels_train,
+                                 patience = 10,
+                                 overwrite = TRUE)
+
+
+feature_blocks <- list(color = c('yellow', 'blue', 'red'), aoo = 'aoo')
+pdp <- iucnn_get_pdp(x = train_output,
+                    dropout_reps = 10,
+                    feature_blocks = feature_blocks)
+}
+
 }

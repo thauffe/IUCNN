@@ -53,7 +53,6 @@ def iucnn_pdp(input_features,
         model = [tf.keras.models.load_model(model_dir)]
     else:
         model = [tf.keras.models.load_model(model_dir[i]) for i in range(cv_fold)]
-    # model = tf.keras.models.load_model(model_dir)
 
     if not isinstance(focal_features, list):
         focal_features = [focal_features]
@@ -90,7 +89,7 @@ def iucnn_pdp(input_features,
                     predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
                     predictions_raw = np.array([turn_reg_output_into_softmax(predictions_raw[j, :, :], label_cats) for j in range(dropout_reps)])
 
-                pred_mean = np.mean(predictions_raw, axis=(0,1))
+                pred_mean = np.mean(predictions_raw, axis=(0, 1))
                 # mean per dropout_reps (i.e. average across taxa)
                 pred_reps = np.mean(predictions_raw, axis=1)
                 pred_reps = np.cumsum(pred_reps, axis=1)
@@ -101,11 +100,15 @@ def iucnn_pdp(input_features,
                 pdp_upr[i, :] = pdp_upr[i, :] / np.max(pdp_upr[i, :])
 
             else:
-                predictions_raw = model[0].predict(tmp_features, verbose=0)
+                predictions_raw = []
+                for j in range(cv_fold):
+                    predictions_raw.append(model[j].predict(tmp_features, verbose=0))
+                predictions_raw = np.vstack(predictions_raw)
+
                 if iucnn_mode == 'nn-reg':
-                    predictions_raw = rescale_labels(predictions_raw, rescale_factor, min_max_label,
-                                                     stretch_factor_rescaled_labels, reverse=True)
-                    predictions_raw = turn_reg_output_into_softmax(predictions_raw, label_cats)
+                    predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
+                    predictions_raw = np.array([turn_reg_output_into_softmax(predictions_raw[j, :, :], label_cats) for j in range(cv_fold)])
+
                 pred_mean = np.mean(predictions_raw, axis=0)
 
             pred_mean = np.cumsum(pred_mean)

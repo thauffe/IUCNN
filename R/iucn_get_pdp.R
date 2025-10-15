@@ -6,18 +6,58 @@
 #'predictions are to be repeated (only for dropout models). A value of 100 is
 #'recommended to capture the stochasticity of the predictions, lower values
 #'speed up the prediction time.
-#'@param feature_blocks a list.
+#'@param feature_blocks a list of features for which the PDP should be obtained.
+#'One hot encoded features should be grouped (see example)
+#'@param include_all_features logical (default = FALSE). IF FALSE, PDPs will be
+#'only obtained for the features in the feature_blocks. If TRUE, PDPs will be
+#'calculated for all feature.
 #'@param provide_indices logical. Set to TRUE if custom \code{feature_blocks}
 #'are provided as indices. Default is FALSE.
-
+#'
+#'@note See \code{vignette("Approximate_IUCN_Red_List_assessments_with_IUCNN")}
+#'  for a tutorial on how to run IUCNN.
+#'
+#'@return A list named according to the feature block with the gradient of the
+#'feature and the partial dependence probabilities for the IUCN category.
+#'When the model has been trained with dropout, the output includes a
+#'95% prediction interval.
+#'
+#' @examples
+#'\dontrun{
+#'data("training_occ")
+#'data("training_labels")
+#'
+#'train_feat <- iucnn_prepare_features(training_occ, type = "geographic")
+#'train_feat$yellow <- 0
+#'train_feat$yellow[1:300] <- 1
+#'train_feat$blue <- 0
+#'train_feat$blue[301:600] <- 1
+#'train_feat$red <- 0
+#'train_feat$red[601:nrow(train_feat)] <- 1
+#'labels_train <- iucnn_prepare_labels(training_labels, train_feat,
+#'                                     level = 'detail')
+#'
+#'train_output <- iucnn_train_model(x = train_feat,
+#'                                  lab = labels_train,
+#'                                  patience = 10,
+#'                                  overwrite = TRUE)
+#'
+#'
+#'feature_blocks <- list(color = c('yellow', 'blue', 'red'), aoo = 'aoo')
+#'pdp <- iucnn_get_pdp(x = train_output,
+#'                     dropout_reps = 10,
+#'                     feature_blocks = feature_blocks)
+#'}
+#'
 #' @export
 #' @importFrom reticulate import source_python
 #' @importFrom checkmate assert_class assert_numeric assert_character
 #'   assert_logical
 #'
 iucnn_get_pdp <- function(x,
-                          dropout_reps,
+                          dropout_reps = 100,
                           feature_blocks = list(),
+                          include_all_features = FALSE,
                           provide_indices = FALSE){
 
   if (!any(file.exists(x$trained_model_path))) {
@@ -29,6 +69,7 @@ iucnn_get_pdp <- function(x,
   assert_class(x, "iucnn_model")
   assert_numeric(dropout_reps)
   assert_class(feature_blocks, "list")
+  assert_logical(include_all_features)
   assert_logical(provide_indices)
 
   dropout_reps <- as.integer(dropout_reps)
@@ -36,7 +77,7 @@ iucnn_get_pdp <- function(x,
   # features for which to obtain PDP
   fb <- make_feature_block(x = x,
                            feature_blocks = feature_blocks,
-                           include_all_features = FALSE,
+                           include_all_features = include_all_features,
                            provide_indices = provide_indices)
   feature_block_indices <- fb$feature_block_indices
   num_feature_blocks <- length(feature_block_indices)
