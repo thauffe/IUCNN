@@ -55,8 +55,12 @@ iucnn_get_pdp <- function(x,
     min_max_label <- x$min_max_label_rescaled
     stretch_factor_rescaled_labels <- x$label_stretch_factor
 
-    data_pdp <- rbind(x$input_data$data, x$input_data$test_data)
-
+    if (x$cv_fold == 1) {
+      data_pdp <- rbind(x$input_data$data, x$input_data$test_data)
+    }
+    else {
+      data_pdp <- x$input_data$data
+    }
 
     pdp <- vector(mode = "list", length = num_feature_blocks)
     names(pdp) <- names(feature_block_indices)
@@ -65,6 +69,7 @@ iucnn_get_pdp <- function(x,
                             focal_features = feature_block_indices[[i]],
                             model_dir = model_dir,
                             iucnn_mode = iucnn_mode,
+                            cv_fold = as.integer(x$cv_fold),
                             dropout = dropout,
                             dropout_reps = dropout_reps,
                             rescale_factor = rescale_factor,

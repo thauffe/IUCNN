@@ -41,6 +41,7 @@ def iucnn_pdp(input_features,
               focal_features,
               model_dir,
               iucnn_mode,
+              cv_fold,
               dropout,
               dropout_reps,
               rescale_factor,
@@ -48,7 +49,11 @@ def iucnn_pdp(input_features,
               stretch_factor_rescaled_labels
              ):
 
-    model = tf.keras.models.load_model(model_dir)
+    if cv_fold == 1:
+        model = [tf.keras.models.load_model(model_dir)]
+    else:
+        model = [tf.keras.models.load_model(model_dir[i]) for i in range(cv_fold)]
+    # model = tf.keras.models.load_model(model_dir)
 
     if not isinstance(focal_features, list):
         focal_features = [focal_features]
@@ -74,34 +79,42 @@ def iucnn_pdp(input_features,
         for i in range(num_pdp_steps):
             tmp_features = np.copy(input_features)
             tmp_features[:, focal_features] = pdp_features[i, :]
+
             if dropout:
-                predictions_raw = np.array([model.predict(tmp_features, verbose=0) for i in np.arange(dropout_reps)])
+                predictions_raw = []
+                for j in range(cv_fold):
+                    predictions_raw.append(np.array([model[j].predict(tmp_features, verbose=0) for i in np.arange(dropout_reps)]))
+                predictions_raw = np.vstack(predictions_raw)
+
                 if iucnn_mode == 'nn-reg':
                     predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
                     predictions_raw = np.array([turn_reg_output_into_softmax(predictions_raw[j, :, :], label_cats) for j in range(dropout_reps)])
+
                 pred_mean = np.mean(predictions_raw, axis=(0,1))
-                pred_reps = np.mean(predictions_raw, axis=1) # mean per dropout_reps (i.e. average across taxa)
+                # mean per dropout_reps (i.e. average across taxa)
+                pred_reps = np.mean(predictions_raw, axis=1)
                 pred_reps = np.cumsum(pred_reps, axis=1)
                 pred_quantiles = np.quantile(pred_reps, q=(0.025, 0.975), axis=0)
                 pdp_lwr[i, :] = pred_quantiles[0, :]
                 pdp_lwr[i, :] = pdp_lwr[i, :] / np.max(pdp_lwr[i, :])
                 pdp_upr[i, :] = pred_quantiles[1, :]
                 pdp_upr[i, :] = pdp_upr[i, :] / np.max(pdp_upr[i, :])
+
             else:
-                predictions_raw = model.predict(tmp_features, verbose=0)
+                predictions_raw = model[0].predict(tmp_features, verbose=0)
                 if iucnn_mode == 'nn-reg':
                     predictions_raw = rescale_labels(predictions_raw, rescale_factor, min_max_label,
                                                      stretch_factor_rescaled_labels, reverse=True)
                     predictions_raw = turn_reg_output_into_softmax(predictions_raw, label_cats)
                 pred_mean = np.mean(predictions_raw, axis=0)
+
             pred_mean = np.cumsum(pred_mean)
             pdp[i, :] = pred_mean / np.max(pred_mean) # Make them sum to exactly 1
 
 
     out_dict = {
         'feature': pdp_features,
-        'pdp': pdp,
-        'raw_predictions': predictions_raw,
+        'pdp': pdp
     }
     if dropout:
         out_dict.update({'lwr': pdp_lwr, 'upr': pdp_upr})
