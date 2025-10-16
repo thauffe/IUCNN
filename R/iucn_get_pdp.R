@@ -93,7 +93,7 @@ iucnn_get_pdp <- function(x,
     iucnn_mode <- x$model
     dropout <- x$mc_dropout
     rescale_factor <- x$label_rescaling_factor
-    min_max_label <- x$min_max_label_rescaled
+    min_max_label <- as.integer(x$min_max_label_rescaled)
     stretch_factor_rescaled_labels <- x$label_stretch_factor
 
     if (x$cv_fold == 1) {

@@ -92,15 +92,19 @@ def iucnn_pdp(input_features,
                     for j in range(s[0]):
                         predictions_raw[j, :, :] = turn_reg_output_into_softmax(predictions_rescaled[j, :, :].T, label_cats)
 
-                pred_mean = np.mean(predictions_raw, axis=(0, 1))
-                # mean per dropout_reps (i.e. average across taxa)
-                pred_reps = np.mean(predictions_raw, axis=1)
-                pred_reps = np.cumsum(pred_reps, axis=1)
+                # cumulative probs for each taxon and each dropout reps
+                pred_reps = np.cumsum(predictions_raw, axis=2)
+                # mean prob across taxa for each dropout reps
+                pred_reps = np.mean(pred_reps, axis=1)
+
+                # uncertainty in cumulative prob across dropout reps
                 pred_quantiles = np.quantile(pred_reps, q=(0.025, 0.975), axis=0)
                 pdp_lwr[i, :] = pred_quantiles[0, :]
-                pdp_lwr[i, :] = pdp_lwr[i, :] / np.max(pdp_lwr[i, :])
+                pdp_lwr[i, :] = pdp_lwr[i, :]
                 pdp_upr[i, :] = pred_quantiles[1, :]
-                pdp_upr[i, :] = pdp_upr[i, :] / np.max(pdp_upr[i, :])
+                pdp_upr[i, :] = pdp_upr[i, :]
+
+                pred_mean = np.mean(pred_reps, axis=0)
 
             else:
                 predictions_raw = []
@@ -112,10 +116,12 @@ def iucnn_pdp(input_features,
                     predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
                     predictions_raw = turn_reg_output_into_softmax(predictions_raw.T, label_cats)
 
-                pred_mean = np.mean(predictions_raw, axis=0)
+                # cumulative probs for each taxon
+                pred = np.cumsum(predictions_raw, axis=1)
+                # mean prob across taxa
+                pred_mean = np.mean(pred, axis=0)
 
-            pred_mean = np.cumsum(pred_mean)
-            pdp[i, :] = pred_mean / np.max(pred_mean) # Make them sum to exactly 1
+            pdp[i, :] = pred_mean
 
 
     out_dict = {
