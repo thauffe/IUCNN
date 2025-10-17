@@ -57,19 +57,29 @@ def iucnn_pdp(input_features,
     if not isinstance(focal_features, list):
         focal_features = [focal_features]
 
+    num_taxa = input_features.shape[0]
     pdp_features = make_pdp_features(input_features, focal_features)
     num_pdp_steps = pdp_features.shape[0]
 
     if iucnn_mode == 'nn-reg':
         num_iucn_cat = int(rescale_factor + 1)
+        num_model_output = 1
         label_cats = np.arange(num_iucn_cat)
+        depth_idx, row_idx = np.indices((num_taxa, cv_fold * dropout_reps))
     else:
         num_iucn_cat = min_max_label[1] + 1
-    pdp = np.zeros((num_pdp_steps, num_iucn_cat))
+        num_model_output = num_iucn_cat
 
     if dropout:
         pdp_lwr = np.zeros((num_pdp_steps, num_iucn_cat))
         pdp_upr = np.zeros((num_pdp_steps, num_iucn_cat))
+    else:
+        dropout_reps = 1
+
+    if iucnn_mode == 'nn-reg':
+        idx_axis0, idx_axis1 = np.indices((num_taxa, cv_fold * dropout_reps))
+
+    pdp = np.zeros((num_pdp_steps, num_iucn_cat))
 
     if iucnn_mode == 'cnn':
         sys.exit('No partial dependence probabilities possible for CNN')
@@ -79,50 +89,29 @@ def iucnn_pdp(input_features,
             tmp_features = np.copy(input_features)
             tmp_features[:, focal_features] = pdp_features[i, :]
 
+            predictions_raw = np.zeros((num_taxa, cv_fold * dropout_reps, num_model_output))
+            counter = 0
+            for j in range(cv_fold):
+                for k in range(dropout_reps):
+                    predictions_raw[:, counter, :] = model[j].predict(tmp_features, verbose=0)
+                    counter += 1
+
+            if iucnn_mode == 'nn-reg':
+                predictions_rescaled = rescale_labels(predictions_raw, rescale_factor, min_max_label,
+                                                      stretch_factor_rescaled_labels, reverse=True)
+                predictions_raw = np.zeros((num_taxa, cv_fold * dropout_reps, num_iucn_cat))
+                predictions_rescaled = np.round(predictions_rescaled, 0).astype(int)
+                predictions_rescaled = np.squeeze(predictions_rescaled, axis=2)
+                predictions_raw[idx_axis0, idx_axis1, predictions_rescaled] = 1.0
+
+            pred_reps = np.cumsum(predictions_raw, axis=2)
+
             if dropout:
-                predictions_raw = []
-                for j in range(cv_fold):
-                    predictions_raw.append(np.array([model[j].predict(tmp_features, verbose=0) for i in np.arange(dropout_reps)]))
-                predictions_raw = np.vstack(predictions_raw)
-
-                if iucnn_mode == 'nn-reg':
-                    predictions_rescaled = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
-                    s = predictions_rescaled.shape
-                    predictions_raw = np.zeros((s[0], s[1], num_iucn_cat))
-                    for j in range(s[0]):
-                        predictions_raw[j, :, :] = turn_reg_output_into_softmax(predictions_rescaled[j, :, :].T, label_cats)
-
-                # cumulative probs for each taxon and each dropout reps
-                pred_reps = np.cumsum(predictions_raw, axis=2)
-                # mean prob across taxa for each dropout reps
-                pred_reps = np.mean(pred_reps, axis=1)
-
-                # uncertainty in cumulative prob across dropout reps
-                pred_quantiles = np.quantile(pred_reps, q=(0.025, 0.975), axis=0)
+                pred_quantiles = np.quantile(np.mean(pred_reps, axis=0), q=(0.025, 0.975), axis=0)
                 pdp_lwr[i, :] = pred_quantiles[0, :]
-                pdp_lwr[i, :] = pdp_lwr[i, :]
                 pdp_upr[i, :] = pred_quantiles[1, :]
-                pdp_upr[i, :] = pdp_upr[i, :]
 
-                pred_mean = np.mean(pred_reps, axis=0)
-
-            else:
-                predictions_raw = []
-                for j in range(cv_fold):
-                    predictions_raw.append(model[j].predict(tmp_features, verbose=0))
-                predictions_raw = np.vstack(predictions_raw)
-
-                if iucnn_mode == 'nn-reg':
-                    predictions_raw = np.array([rescale_labels(j, rescale_factor, min_max_label, stretch_factor_rescaled_labels, reverse=True) for j in predictions_raw])
-                    predictions_raw = turn_reg_output_into_softmax(predictions_raw.T, label_cats)
-
-                # cumulative probs for each taxon
-                pred = np.cumsum(predictions_raw, axis=1)
-                # mean prob across taxa
-                pred_mean = np.mean(pred, axis=0)
-
-            pdp[i, :] = pred_mean
-
+            pdp[i, :] = np.mean(pred_reps, axis=(0, 1))
 
     out_dict = {
         'feature': pdp_features,
@@ -132,7 +121,6 @@ def iucnn_pdp(input_features,
         out_dict.update({'lwr': pdp_lwr, 'upr': pdp_upr})
 
     return  out_dict
-
 
 
 def get_focal_summary(input_features, focal_features):

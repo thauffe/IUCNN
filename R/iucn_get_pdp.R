@@ -128,5 +128,7 @@ iucnn_get_pdp <- function(x,
     }
 
   }
+  
+  class(pdp) <- "iucnn_pdp"
   return(pdp)
 }
