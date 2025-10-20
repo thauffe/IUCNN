@@ -15,7 +15,8 @@
 #'are provided as indices. Default is FALSE.
 #'
 #'@note See \code{vignette("Approximate_IUCN_Red_List_assessments_with_IUCNN")}
-#'  for a tutorial on how to run IUCNN.
+#'  for a tutorial on how to run IUCNN and \code{\link{plot.iucnn_pdp}} for plotting
+#'  options.
 #'
 #'@return A list named according to the feature block with the gradient of the
 #'feature and the partial dependence probabilities for the IUCN category.
@@ -28,6 +29,8 @@
 #'data("training_labels")
 #'
 #'train_feat <- iucnn_prepare_features(training_occ, type = "geographic")
+#'
+#'# create fake one-hot encoded categorical feature
 #'train_feat$yellow <- 0
 #'train_feat$yellow[1:300] <- 1
 #'train_feat$blue <- 0
@@ -48,6 +51,9 @@
 #'                     dropout_reps = 10,
 #'                     feature_blocks = feature_blocks)
 #'}
+#'
+#'# plot partial dependence probabilities
+#'plot(pdp)
 #'
 #' @export
 #' @importFrom reticulate import source_python
@@ -128,7 +134,7 @@ iucnn_get_pdp <- function(x,
     }
 
   }
-  
+
   class(pdp) <- "iucnn_pdp"
   return(pdp)
 }
