@@ -65,7 +65,10 @@ def iucnn_train(dataset,
                 optimizer,
                 optimizer_kwargs,
                 l2_regularizer,
+                augmented,
                 test_label_balance_factor = 1.0):
+    
+    keras.utils.set_random_seed(seed)
     
     @keras.saving.register_keras_serializable()
     class MCDropout(tf.keras.layers.Dropout):
@@ -374,6 +377,9 @@ def iucnn_train(dataset,
     rescale_factor = max(labels)
     rescaled_labels = rescale_labels(labels,rescale_factor,min_max_label,stretch_factor_rescaled_labels)
     
+    if not augmented is None:
+        augmented = np.array(augmented)
+    
     if cv_k > 1:
         train_index_blocks = iter_test_indices(dataset,n_splits = cv_k,shuffle=randomize_instances)
         cv = True
@@ -381,6 +387,8 @@ def iucnn_train(dataset,
     else:
         if randomize_instances:
             rnd_indx = np.random.choice(range(len(labels)), len(labels), replace=False)
+            if isinstance(augmented, np.ndarray):
+                augmented = augmented[rnd_indx]
         else:
             rnd_indx = np.arange(len(labels))
         
@@ -389,8 +397,17 @@ def iucnn_train(dataset,
             test_indices = [[]]
         else:
             test_size = int(len(labels)*test_fraction)
-            train_index_blocks = [rnd_indx[:-test_size]]
-            test_indices = [rnd_indx[-test_size:]]
+            if not isinstance(augmented, np.ndarray):
+                train_index_blocks = [rnd_indx[:-test_size]]
+                test_indices = [rnd_indx[-test_size:]]
+            else:
+                if np.sum(~augmented) > test_size:
+                    sys.exit('Test data should not include augmented data.')
+                else:
+                    not_augmented_indx = np.where(~augmented)[0]
+                    test_indices = [not_augmented_indx[:test_size]]
+                    train_index_blocks = [rnd_indx[np.isin(rnd_indx, test_indices, invert=True)]]
+                
         cv = False
         
     train_acc_per_fold = []

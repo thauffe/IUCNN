@@ -173,6 +173,7 @@ iucnn_train_model <- function(x,
                         optimizer = "adam",
                         optimizer_args = NULL,
                         l2_regularizer = NULL,
+                        augmented = c(),
                         verbose = 1){
 
   # Check input
@@ -195,6 +196,7 @@ iucnn_train_model <- function(x,
   assert_logical(rescale_features)
   assert_logical(overwrite)
   match.arg(mode, choices = c("nn-class", "nn-reg", "bnn-class", "cnn-class"))
+  assert_logical(augmented, len = nrow(x), null.ok = TRUE)
 
   if (cv_fold == 1) {
     if (test_fraction == 0) {
@@ -447,6 +449,7 @@ the BNN will instead provide posterior estimates of the class labels for each in
                       save_model = save_model,
                       optimizer = tolower(optimizer),
                       optimizer_kwargs = optimizer_args,
+                      augmented = augmented,
                       l2_regularizer = l2_regularizer
     )
 
