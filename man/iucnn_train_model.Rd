@@ -33,6 +33,7 @@ iucnn_train_model(
   optimizer = "adam",
   optimizer_args = NULL,
   l2_regularizer = NULL,
+  augmented = c(),
   verbose = 1
 )
 }

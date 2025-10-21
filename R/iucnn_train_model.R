@@ -143,7 +143,7 @@
 #' @export
 #' @importFrom reticulate py_get_attr source_python
 #' @importFrom stats complete.cases
-#' @importFrom checkmate assert_data_frame assert_character assert_logical assert_numeric
+#' @importFrom checkmate assert_data_frame assert_character assert_logical assert_numeric assert_list assert_names
 
 iucnn_train_model <- function(x,
                         lab,
@@ -196,6 +196,19 @@ iucnn_train_model <- function(x,
   assert_logical(rescale_features)
   assert_logical(overwrite)
   match.arg(mode, choices = c("nn-class", "nn-reg", "bnn-class", "cnn-class"))
+  assert_list(optimizer_args, null.ok = TRUE)
+  match.arg(optimizer,
+            choices = c("adadelta", "adafactor", "adagrad", "adam", "adamw",
+                        "adamax", "ftrl", "nadam", "optimizer", "rmsprop",
+                        "sgd"))
+  assert_list(l2_regularizer, types = "numeric", null.ok = TRUE)
+  names_reg <- names(l2_regularizer)
+  if (!is.null(names_reg)) {
+    assert_names(names_reg,
+                 subset.of = c("kernel_regularizer", "bias_regularizer",
+                               "activity_regularizer"))
+  }
+
   assert_logical(augmented, len = nrow(x), null.ok = TRUE)
 
   if (cv_fold == 1) {
