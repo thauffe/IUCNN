@@ -143,11 +143,17 @@ iucnn_predict_status <- function(x,
     reticulate::source_python(system.file("python",
                                           "IUCNN_helper_functions.py",
                                           package = "IUCNN"))
-    pred_out <- predict_bnn(features = as.matrix(dataset),
-                            model_path = model$trained_model_path,
-                            posterior_threshold = confidence_threshold,
-                            post_summary_mode = 0
-                          )
+    pred_out_2 <- predict_bnn(features = as.matrix(dataset),
+                              model_path = model$trained_model_path,
+                              posterior_threshold = confidence_threshold,
+                              post_summary_mode = 0)
+    if (model$min_max_label_rescaled[2] == 1) {
+      labels <- c("Not Threatened", "Threatened")
+    }
+    else {
+      labels <- c("LC", "NT", "VU", "EN", "CR")
+    }
+    pred_out_2$class_predictions <- labels[pred_out_2$class_predictions + 1]
 
 
   }
