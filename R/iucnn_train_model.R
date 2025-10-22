@@ -302,16 +302,15 @@ the BNN will instead provide posterior estimates of the class labels for each in
 
     # transform the data into BNN compatible format
     bnn_data <- bnn_load_data(dataset,
-                             labels,
-                             seed = as.integer(seed),
-                             testsize = test_fraction,
-                             all_class_in_testset = FALSE,
-                             randomize_order = randomize_instances,
-                             header = TRUE, # input data has a header
-                             # input data includes names of instances
-                             instance_id = TRUE,
-                             from_file = FALSE
-    )
+                              labels,
+                              seed = as.integer(seed),
+                              testsize = test_fraction,
+                              all_class_in_testset = FALSE,
+                              randomize_order = randomize_instances,
+                              header = TRUE, # input data has a header
+                              # input data includes names of instances
+                              instance_id = TRUE,
+                              from_file = FALSE)
 
     # define number of layers and nodes per layer for BNN
     # define the BNN model
@@ -321,12 +320,11 @@ the BNN will instead provide posterior estimates of the class labels for each in
       bias_node_setting = 0
     }
     bnn_model <- create_BNN_model(bnn_data,
-                                 n_layers,
-                                 seed = as.integer(seed),
-                                 use_class_weight = balance_classes,
-                                 use_bias_node = bias_node_setting,
-                                 actfun = act_f
-    )
+                                  n_layers,
+                                  seed = as.integer(seed),
+                                  use_class_weight = balance_classes,
+                                  use_bias_node = bias_node_setting,
+                                  actfun = act_f)
 
     # set up the MCMC environment
     update_frequencies <- rep(0.05, length(n_layers) + 1)
@@ -367,6 +365,7 @@ the BNN will instead provide posterior estimates of the class labels for each in
     pklfile_path <- as.character(py_get_attr(logger, '_pklfile'))
 
     test_labels <- bnn_data$test_labels
+    test_instance_names <- bnn_data$id_test_data
     test_predictions <- apply(post_pr_test$post_prob_predictions,
                                     1,
                                     which.max) - 1
