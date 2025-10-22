@@ -88,51 +88,54 @@ iucnn_get_pdp <- function(x,
   feature_block_indices <- fb$feature_block_indices
   num_feature_blocks <- length(feature_block_indices)
 
+
+
+  reticulate::source_python(system.file("python", "IUCNN_pdp.py",
+                                        package = "IUCNN"))
   if (x$model == 'bnn-class') {
-    placeholder <- NULL
+    # source python function
+    reticulate::source_python(system.file("python",
+                                          "IUCNN_helper_functions.py",
+                                          package = "IUCNN"))
+  }
+
+
+  model_dir <- x$trained_model_path
+  iucnn_mode <- x$model
+  dropout <- x$mc_dropout
+  rescale_factor <- x$label_rescaling_factor
+  min_max_label <- as.integer(x$min_max_label_rescaled)
+  stretch_factor_rescaled_labels <- x$label_stretch_factor
+
+  if (x$cv_fold == 1) {
+    data_pdp <- rbind(x$input_data$data, x$input_data$test_data)
   }
   else {
-    reticulate::source_python(system.file("python", "IUCNN_pdp.py",
-                                          package = "IUCNN"))
+    data_pdp <- x$input_data$data
+  }
 
-    model_dir <- x$trained_model_path
-    iucnn_mode <- x$model
-    dropout <- x$mc_dropout
-    rescale_factor <- x$label_rescaling_factor
-    min_max_label <- as.integer(x$min_max_label_rescaled)
-    stretch_factor_rescaled_labels <- x$label_stretch_factor
+  pdp <- vector(mode = "list", length = num_feature_blocks)
+  names(pdp) <- names(feature_block_indices)
+  for (i in 1:num_feature_blocks) {
+    pdp[[i]] <- iucnn_pdp(input_features = data_pdp,
+                          focal_features = feature_block_indices[[i]],
+                          model_dir = model_dir,
+                          iucnn_mode = iucnn_mode,
+                          cv_fold = as.integer(x$cv_fold),
+                          dropout = dropout,
+                          dropout_reps = dropout_reps,
+                          rescale_factor = rescale_factor,
+                          min_max_label = min_max_label,
+                          stretch_factor_rescaled_labels = stretch_factor_rescaled_labels)
 
-    if (x$cv_fold == 1) {
-      data_pdp <- rbind(x$input_data$data, x$input_data$test_data)
+    if (length(feature_block_indices[[i]]) == 1) {
+      colnames(pdp[[i]][[1]]) <- names(feature_block_indices)[i]
     }
     else {
-      data_pdp <- x$input_data$data
+      df <- data.frame(A = feature_blocks[[i]])
+      colnames(df) <- names(feature_block_indices)[i]
+      pdp[[i]][[1]] <- df
     }
-
-    pdp <- vector(mode = "list", length = num_feature_blocks)
-    names(pdp) <- names(feature_block_indices)
-    for (i in 1:num_feature_blocks) {
-      pdp[[i]] <- iucnn_pdp(input_features = data_pdp,
-                            focal_features = feature_block_indices[[i]],
-                            model_dir = model_dir,
-                            iucnn_mode = iucnn_mode,
-                            cv_fold = as.integer(x$cv_fold),
-                            dropout = dropout,
-                            dropout_reps = dropout_reps,
-                            rescale_factor = rescale_factor,
-                            min_max_label = min_max_label,
-                            stretch_factor_rescaled_labels = stretch_factor_rescaled_labels)
-
-      if (length(feature_block_indices[[i]]) == 1) {
-        colnames(pdp[[i]][[1]]) <- names(feature_block_indices)[i]
-      }
-      else {
-        df <- data.frame(A = feature_blocks[[i]])
-        colnames(df) <- names(feature_block_indices)[i]
-        pdp[[i]][[1]] <- df
-      }
-    }
-
   }
 
   class(pdp) <- "iucnn_pdp"

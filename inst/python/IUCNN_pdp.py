@@ -3,7 +3,7 @@
 """
 Created Octuber 2025
 
-@author: Torsten hauffe (torsten.hauffe8@gmail.com)
+@author: Torsten hauffe (torsten.hauffe@gmail.com)
 """
 
 import os, sys
@@ -49,10 +49,20 @@ def iucnn_pdp(input_features,
               stretch_factor_rescaled_labels
              ):
 
-    if cv_fold == 1:
-        model = [tf.keras.models.load_model(model_dir)]
+    uncertainty = dropout
+    if iucnn_mode == 'bnn-class':
+        import np_bnn as bn
+        weight_pickle = model_dir
+        bnn_obj, mcmc_obj, logger_obj = bn.load_obj(weight_pickle)
+        posterior_weight_samples = logger_obj._post_weight_samples
+        actFun = bnn_obj._act_fun
+        output_act_fun = bnn_obj._output_act_fun
+        uncertainty = True
     else:
-        model = [tf.keras.models.load_model(model_dir[i]) for i in range(cv_fold)]
+        if cv_fold == 1:
+            model = [tf.keras.models.load_model(model_dir)]
+        else:
+            model = [tf.keras.models.load_model(model_dir[i]) for i in range(cv_fold)]
 
     if not isinstance(focal_features, list):
         focal_features = [focal_features]
@@ -70,7 +80,7 @@ def iucnn_pdp(input_features,
         num_iucn_cat = min_max_label[1] + 1
         num_model_output = num_iucn_cat
 
-    if dropout:
+    if uncertainty:
         pdp_lwr = np.zeros((num_pdp_steps, num_iucn_cat))
         pdp_upr = np.zeros((num_pdp_steps, num_iucn_cat))
     else:
@@ -92,9 +102,16 @@ def iucnn_pdp(input_features,
             predictions_raw = np.zeros((num_taxa, cv_fold * dropout_reps, num_model_output))
             counter = 0
             for j in range(cv_fold):
-                for k in range(dropout_reps):
-                    predictions_raw[:, counter, :] = model[j].predict(tmp_features, verbose=0)
-                    counter += 1
+                if iucnn_mode == 'bnn-class':
+                    predictions_raw, _ = bn.get_posterior_cat_prob(tmp_features,
+                                                                   posterior_weight_samples,
+                                                                   actFun=actFun,
+                                                                   output_act_fun=output_act_fun)
+                    predictions_raw = np.swapaxes(predictions_raw, 0, 1)
+                else:
+                    for k in range(dropout_reps):
+                        predictions_raw[:, counter, :] = model[j].predict(tmp_features, verbose=0)
+                        counter += 1
 
             if iucnn_mode == 'nn-reg':
                 predictions_rescaled = rescale_labels(predictions_raw, rescale_factor, min_max_label,
@@ -106,7 +123,7 @@ def iucnn_pdp(input_features,
 
             pred_reps = np.cumsum(predictions_raw, axis=2)
 
-            if dropout:
+            if uncertainty:
                 pred_quantiles = np.quantile(np.mean(pred_reps, axis=0), q=(0.025, 0.975), axis=0)
                 pdp_lwr[i, :] = pred_quantiles[0, :]
                 pdp_upr[i, :] = pred_quantiles[1, :]
@@ -117,7 +134,7 @@ def iucnn_pdp(input_features,
         'feature': pdp_features,
         'pdp': pdp
     }
-    if dropout:
+    if uncertainty:
         out_dict.update({'lwr': pdp_lwr, 'upr': pdp_upr})
 
     return  out_dict
