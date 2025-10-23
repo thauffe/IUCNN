@@ -399,14 +399,14 @@ process_iucnn_input <- function(x,
 
     # check if species were lost by the merging
     if (nrow(tmp.in) != nrow(x)) {
-      mis <- x$species[!x$species %in% tmp$species]
+      mis <- x$species[!x$species %in% tmp.in$species]
       if (verbose == 1) {
         warning("Labels for species not found, species removed.\n", paste(mis, "\n"))
       }
     }
 
     if (nrow(tmp.in) != nrow(lab$labels)) {
-      mis <- lab$labels$species[!lab$labels$species %in% tmp$species]
+      mis <- lab$labels$species[!lab$labels$species %in% tmp.in$species]
       if (verbose == 1) {
         warning("Features for species not found, species removed.\n", paste(mis, "\n"))
       }
