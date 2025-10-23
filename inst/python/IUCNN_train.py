@@ -35,6 +35,10 @@ try:
 except:
     pass
 
+# declare location of the python files make functions of other python files importable
+sys.path.append(os.path.dirname(__file__))
+from IUCNN_predict import rescale_labels, turn_reg_output_into_softmax
+
 def iucnn_train(dataset,
                 labels,
                 mode,
@@ -223,25 +227,6 @@ def iucnn_train(dataset,
             cat_acc = np.sum(label_predictions==real_labels)/len(label_predictions)
             return cat_acc, label_predictions, prm_est_mean
 
-    def rescale_labels(labels,rescale_factor,min_max_label,stretch_factor_rescaled_labels,reverse=False):
-        label_range = max(min_max_label)-min(min_max_label)
-        modified_range = stretch_factor_rescaled_labels*label_range
-        midpoint_range = np.mean(min_max_label)
-        if reverse:
-            rescaled_labels_tmp = (labels-midpoint_range)/modified_range
-            rescaled_labels = (rescaled_labels_tmp+0.5)*rescale_factor
-        else:
-            rescaled_labels_tmp = (labels/rescale_factor)-0.5
-            rescaled_labels = rescaled_labels_tmp*modified_range+midpoint_range
-        return(rescaled_labels)
-    
-    # def rescale_labels(labels,n_labels,lab_range):
-    #     if n_labels == 0:
-    #         rescaled_labels = labels
-    #     else:
-    #         rescaled_labels = ((labels/lab_range) +0.5) * (n_labels-1)
-    #     return(rescaled_labels)
-
     def model_init(mode,dropout, dropout_rate, use_bias, l2_regularizer):
         if mode == 'nn-reg':
             model = build_regression_model(dropout, dropout_rate, use_bias, l2_regularizer)
@@ -294,11 +279,6 @@ def iucnn_train(dataset,
         accuracy = len(pred[pred == labels_supported])/len(pred)
         dropped_frequency = len(pred)/len(labels)
         return {'predictions': pred, 'accuracy': accuracy, 'retained_samples': dropped_frequency}
-
-    def turn_reg_output_into_softmax(reg_out_rescaled,label_cats):
-            predictions = np.round(reg_out_rescaled, 0).astype(int)
-            softmax_probs_mean = np.array([[len(np.where(predictions[:,i]==j)[0])/len(predictions[:,i]) for j in label_cats] for  i in np.arange(predictions.shape[1])])
-            return softmax_probs_mean
 
     def supersample_classes(train_ids,labels):
         train_ids = np.array(train_ids)
@@ -759,4 +739,3 @@ def iucnn_train(dataset,
     }
     
     return output
-
